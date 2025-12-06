@@ -173,10 +173,17 @@ def _create_client_wrapper(
     def client_wrapper(wrapped: Callable, instance: Any, args: tuple, kwargs: dict) -> Any:
         # Create the original client
         client = wrapped(*args, **kwargs)
+        
+        # Extract config from args or kwargs
+        config = None
+        if args:
+            config = args[0]
+        elif "config" in kwargs:
+            config = kwargs["config"]
 
         # Wrap the client instance with our instrumented proxy
         return InstrumentedAerospikeClient(
-            client, tracer, request_hook, response_hook, error_hook, capture_key
+            client, tracer, request_hook, response_hook, error_hook, capture_key, config
         )
 
     return client_wrapper
@@ -227,6 +234,7 @@ class InstrumentedAerospikeClient:
         response_hook: Callable | None,
         error_hook: Callable | None,
         capture_key: bool,
+        config: dict | None = None,
     ):
         self._client = client
         self._tracer = tracer
@@ -235,8 +243,24 @@ class InstrumentedAerospikeClient:
         self._error_hook = error_hook
         self._capture_key = capture_key
 
-        # Store hosts config for connection attributes
-        self._hosts = None
+        # Store server connection info for span attributes
+        self._server_address = None
+        self._server_port = None
+        
+        # Extract hosts from config if provided
+        if config and isinstance(config, dict):
+            hosts = config.get("hosts", [])
+            if hosts:
+                try:
+                    first_host = hosts[0]
+                    if isinstance(first_host, tuple) and len(first_host) >= 2:
+                        self._server_address = str(first_host[0])
+                        self._server_port = int(first_host[1])
+                    elif isinstance(first_host, tuple) and len(first_host) == 1:
+                        self._server_address = str(first_host[0])
+                        self._server_port = 3000
+                except Exception:
+                    pass
 
     def __getattr__(self, name: str) -> Any:
         """Proxy attribute access to the wrapped client."""
@@ -260,8 +284,31 @@ class InstrumentedAerospikeClient:
         return attr
 
     def connect(self, *args, **kwargs) -> InstrumentedAerospikeClient:
-        """Connect to the Aerospike cluster."""
-        self._client.connect(*args, **kwargs)
+        """Connect to the Aerospike cluster and cache server address."""
+        result = self._client.connect(*args, **kwargs)
+        
+        # If server address wasn't set during __init__, try to get it from client after connection
+        if self._server_address is None:
+            try:
+                # Try to get node info after connection
+                if hasattr(self._client, "get_nodes"):
+                    nodes = self._client.get_nodes()
+                    if nodes:
+                        # Use first node's address
+                        node = nodes[0]
+                        if hasattr(node, "name"):
+                            # node.name is typically "host:port"
+                            node_name = node.name
+                            if ":" in node_name:
+                                host, port = node_name.rsplit(":", 1)
+                                self._server_address = host
+                                self._server_port = int(port)
+                            else:
+                                self._server_address = node_name
+                                self._server_port = 3000
+            except Exception:
+                pass
+        
         return self
 
     def close(self) -> None:
@@ -272,37 +319,13 @@ class InstrumentedAerospikeClient:
         """Check if connected."""
         return self._client.is_connected()
 
-    def _get_hosts(self) -> list | None:
-        """Get hosts from client configuration."""
-        if self._hosts is None:
-            try:
-                # Try to get hosts from shm_key or other means
-                # The config might be accessible through different attributes
-                if hasattr(self._client, "config"):
-                    config = self._client.config
-                    if callable(config):
-                        config = config()
-                    self._hosts = config.get("hosts", [])
-            except Exception:
-                pass
-        return self._hosts
-
     def _set_connection_attributes(self, span: Span) -> None:
         """Set connection-related attributes on span."""
-        hosts = self._get_hosts()
-        if hosts:
-            try:
-                first_host = hosts[0]
-                if isinstance(first_host, tuple):
-                    host = first_host[0]
-                    port = first_host[1] if len(first_host) > 1 else 3000
-                else:
-                    host = first_host
-                    port = 3000
-                span.set_attribute(_SERVER_ADDRESS_ATTR, str(host))
-                span.set_attribute(_SERVER_PORT_ATTR, int(port))
-            except Exception:
-                pass
+        # Use cached server address if available
+        if self._server_address:
+            span.set_attribute(_SERVER_ADDRESS_ATTR, self._server_address)
+            if self._server_port:
+                span.set_attribute(_SERVER_PORT_ATTR, self._server_port)
 
     def _wrap_single_record_method(self, method: Callable, operation: str) -> Callable:
         """Wrap a single record operation method."""
