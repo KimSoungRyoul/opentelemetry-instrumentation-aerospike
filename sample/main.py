@@ -308,32 +308,23 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     batch_records = client.batch_read(batch_keys)
     
     batch_result_records = []
-    found_count = 0
+ 
     
-    for batch_record in batch_records:
-        record_key, record_meta, record_bins = batch_record
-        if record_bins:  # Record found
-            found_count += 1
-            batch_result_records.append({
-                "key": record_key[2] if record_key and len(record_key) > 2 else None,
-                "bins": record_bins,
-                "generation": record_meta.get("gen") if record_meta else None,
-                "ttl": record_meta.get("ttl") if record_meta else None
-            })
-        else:  # Record not found
-            batch_result_records.append({
-                "key": record_key[2] if record_key and len(record_key) > 2 else None,
-                "bins": None,
-                "error": "not_found"
-            })
+    for batch_record in batch_records.batch_records:
+        print(batch_record)
+        record_key, record_meta, record_bins = batch_record.record
+        logger.info(f"[BATCH_READ] record_key={record_key}, record_meta={record_meta}, record_bins={record_bins}")
+        batch_result_records.append({
+            "key": record_key[2] if record_key and len(record_key) > 2 else None,
+            "bins": record_bins,
+        })
     
     batch_read_result = {
         "status": "ok",
         "total_keys": len(request.batch_keys),
-        "found": found_count,
+        "found": len(batch_records.batch_records),
         "records": batch_result_records
     }
-    logger.info(f"[BATCH_READ] Success: {found_count}/{len(request.batch_keys)} records found")
 
     # ============================================
     # Return results
