@@ -14,7 +14,11 @@ This library enables automatic tracing of Aerospike database operations, providi
 pip install opentelemetry-instrumentation-aerospike
 ```
 
-ㅣ
+## QuickStart
+
+* https://github.com/KimSoungRyoul/opentelemetry-instrumentation-aerospike/tree/main/sample
+
+
 ## Requirements
 
 - Python >= 3.9
