@@ -2,13 +2,6 @@
 
 A FastAPI application demonstrating Aerospike operations with OpenTelemetry instrumentation.
 
-## Features
-
-- ✅ **CRUD Operations**: `put`, `get`, `touch`
-- ✅ **Batch Operations**: `batch_read` for multiple records
-- ✅ **Query with Secondary Index**: Automatic index creation
-- ✅ **OpenTelemetry Tracing**: Full distributed tracing
-- ✅ **Jaeger Integration**: Visualize traces in real-time
 
 ## Installation
 
