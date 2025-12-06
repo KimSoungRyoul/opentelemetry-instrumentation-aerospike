@@ -1,8 +1,7 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-End-to-End tests for OpenTelemetry Aerospike Instrumentation.
+"""End-to-End tests for OpenTelemetry Aerospike Instrumentation.
 
 These tests simulate real-world application scenarios with actual
 Aerospike database operations and verify that tracing works correctly.
@@ -12,23 +11,20 @@ Prerequisites:
 """
 
 import asyncio
+import contextlib
 import functools
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
 
 import aerospike
 import pytest
 
-from opentelemetry import trace
+from opentelemetry.instrumentation.aerospike import AerospikeInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import StatusCode
-
-from opentelemetry.instrumentation.aerospike import AerospikeInstrumentor
-
 
 # Test configuration
 AEROSPIKE_HOST = "127.0.0.1"
@@ -60,7 +56,7 @@ def tracer_setup():
 
 @pytest.fixture
 def instrumented_env(aerospike_available, tracer_setup):
-    """Setup instrumented environment."""
+    """Set up instrumented environment."""
     provider, exporter = tracer_setup
 
     instrumentor = AerospikeInstrumentor()
@@ -80,10 +76,7 @@ class TestUserSessionScenario:
     """E2E tests simulating user session management."""
 
     def test_user_login_session_flow(self, instrumented_env):
-        """
-        Scenario: User login creates session, session is accessed multiple times,
-        then user logs out and session is deleted.
-        """
+        """Test user login creates session, accesses it, then logs out."""
         client, exporter = instrumented_env
 
         # Generate unique user/session IDs
@@ -102,7 +95,7 @@ class TestUserSessionScenario:
         client.put(session_key, session_data)
 
         # 2. Multiple session accesses (simulating page views)
-        for i in range(3):
+        for _ in range(3):
             _, meta, record = client.get(session_key)
             assert record["user_id"] == user_id
 
@@ -137,9 +130,7 @@ class TestUserSessionScenario:
             assert span.status.status_code != StatusCode.ERROR
 
     def test_concurrent_session_access(self, instrumented_env):
-        """
-        Scenario: Multiple concurrent requests accessing the same session.
-        """
+        """Test multiple concurrent requests accessing the same session."""
         client, exporter = instrumented_env
 
         session_id = f"concurrent_session_{uuid.uuid4().hex[:8]}"
@@ -179,9 +170,7 @@ class TestCacheScenario:
     """E2E tests simulating cache operations."""
 
     def test_cache_miss_then_hit(self, instrumented_env):
-        """
-        Scenario: Cache miss triggers data fetch, then subsequent requests hit cache.
-        """
+        """Test cache miss triggers data fetch, then subsequent requests hit cache."""
         client, exporter = instrumented_env
 
         cache_key = (NAMESPACE, "cache", f"product_{uuid.uuid4().hex[:8]}")
@@ -227,9 +216,7 @@ class TestCacheScenario:
         client.remove(cache_key)
 
     def test_cache_invalidation(self, instrumented_env):
-        """
-        Scenario: Cache data is updated when source changes.
-        """
+        """Test cache data is updated when source changes."""
         client, exporter = instrumented_env
 
         product_id = f"product_{uuid.uuid4().hex[:8]}"
@@ -265,9 +252,7 @@ class TestRealTimeCounterScenario:
     """E2E tests simulating real-time counters."""
 
     def test_page_view_counter(self, instrumented_env):
-        """
-        Scenario: Increment page view counter for analytics.
-        """
+        """Test increment page view counter for analytics."""
         client, exporter = instrumented_env
 
         page_id = f"page_{uuid.uuid4().hex[:8]}"
@@ -302,9 +287,7 @@ class TestRealTimeCounterScenario:
         client.remove(counter_key)
 
     def test_rate_limiter(self, instrumented_env):
-        """
-        Scenario: Implement rate limiting using increment operation.
-        """
+        """Test rate limiting using increment operation."""
         client, exporter = instrumented_env
 
         user_id = f"user_{uuid.uuid4().hex[:8]}"
@@ -346,9 +329,7 @@ class TestBatchOperationsScenario:
     """E2E tests simulating batch data processing."""
 
     def test_bulk_user_import(self, instrumented_env):
-        """
-        Scenario: Import multiple users in batch operation.
-        """
+        """Test import multiple users in batch operation."""
         client, exporter = instrumented_env
 
         batch_id = uuid.uuid4().hex[:8]
@@ -388,9 +369,7 @@ class TestBatchOperationsScenario:
             client.remove(key)
 
     def test_scan_and_process(self, instrumented_env):
-        """
-        Scenario: Scan records and process them.
-        """
+        """Test scan records and process them."""
         client, exporter = instrumented_env
 
         set_name = f"scan_test_{uuid.uuid4().hex[:8]}"
@@ -432,9 +411,7 @@ class TestQueryScenario:
     """E2E tests simulating query operations."""
 
     def test_query_creation(self, instrumented_env):
-        """
-        Scenario: Create and configure a query.
-        """
+        """Test create and configure a query."""
         client, exporter = instrumented_env
 
         set_name = f"query_set_{uuid.uuid4().hex[:8]}"
@@ -468,9 +445,7 @@ class TestErrorHandlingScenario:
     """E2E tests for error handling scenarios."""
 
     def test_record_not_found_handling(self, instrumented_env):
-        """
-        Scenario: Gracefully handle missing records.
-        """
+        """Test gracefully handle missing records."""
         client, exporter = instrumented_env
 
         missing_key = (NAMESPACE, "test", f"nonexistent_{uuid.uuid4().hex}")
@@ -493,9 +468,7 @@ class TestErrorHandlingScenario:
         assert "db.response.status_code" in span.attributes
 
     def test_generation_conflict(self, instrumented_env):
-        """
-        Scenario: Handle optimistic locking with generation check.
-        """
+        """Test handle optimistic locking with generation check."""
         client, exporter = instrumented_env
 
         key = (NAMESPACE, "test", f"gen_test_{uuid.uuid4().hex[:8]}")
@@ -539,9 +512,7 @@ class TestAsyncPatternScenario:
     """E2E tests for async wrapper pattern compatibility."""
 
     def test_async_crud_operations(self, instrumented_env):
-        """
-        Scenario: Full CRUD cycle using async wrapper pattern.
-        """
+        """Test full CRUD cycle using async wrapper pattern."""
         client, exporter = instrumented_env
 
         executor = ThreadPoolExecutor(max_workers=4)
@@ -601,9 +572,7 @@ class TestAsyncPatternScenario:
         assert operations == ["PUT", "GET", "PUT", "GET", "REMOVE"]
 
     def test_async_parallel_operations(self, instrumented_env):
-        """
-        Scenario: Multiple parallel async operations.
-        """
+        """Test multiple parallel async operations."""
         client, exporter = instrumented_env
 
         executor = ThreadPoolExecutor(max_workers=10)
@@ -666,9 +635,7 @@ class TestHooksScenario:
     """E2E tests for hook functionality."""
 
     def test_request_response_hooks_logging(self, aerospike_available, tracer_setup):
-        """
-        Scenario: Use hooks to add custom logging/metrics.
-        """
+        """Test use hooks to add custom logging/metrics."""
         provider, exporter = tracer_setup
 
         request_log = []
@@ -724,10 +691,8 @@ class TestHooksScenario:
             client.get(key)
 
             # Error operation
-            try:
+            with contextlib.suppress(aerospike.exception.RecordNotFound):
                 client.get((NAMESPACE, "hooks_test", "nonexistent_key_xyz"))
-            except aerospike.exception.RecordNotFound:
-                pass
 
             # Cleanup
             client.remove(key)
@@ -754,9 +719,7 @@ class TestTraceContextPropagation:
     """E2E tests for trace context propagation."""
 
     def test_spans_share_trace_id(self, instrumented_env):
-        """
-        Scenario: All operations in a request share the same trace ID.
-        """
+        """Test all operations in a request share the same trace ID."""
         client, exporter = instrumented_env
 
         key = (NAMESPACE, "trace_test", f"trace_{uuid.uuid4().hex[:8]}")
@@ -776,9 +739,7 @@ class TestTraceContextPropagation:
         assert len(set(span_ids)) == 5  # All unique
 
     def test_operation_timing(self, instrumented_env):
-        """
-        Scenario: Verify span timing reflects actual operation duration.
-        """
+        """Test verify span timing reflects actual operation duration."""
         client, exporter = instrumented_env
 
         key = (NAMESPACE, "timing_test", f"timing_{uuid.uuid4().hex[:8]}")
