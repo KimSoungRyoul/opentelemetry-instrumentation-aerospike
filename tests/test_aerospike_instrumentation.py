@@ -38,7 +38,7 @@ class TestAerospikeInstrumentorUnit:
             deps = instrumentor.instrumentation_dependencies()
 
             assert len(deps) == 1
-            assert "aerospike >= 17.2.0" in deps[0]
+            assert "aerospike >= 17.0.0" in deps[0]
 
     def test_instrument_uninstrument(self, tracer_setup):
         """Test instrument and uninstrument cycle."""
