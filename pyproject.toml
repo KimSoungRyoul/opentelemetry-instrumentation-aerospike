@@ -54,9 +54,9 @@ dev = [
 aerospike = "opentelemetry.instrumentation.aerospike:AerospikeInstrumentor"
 
 [project.urls]
-Homepage = "https://github.com/open-telemetry/opentelemetry-python-contrib"
-Repository = "https://github.com/open-telemetry/opentelemetry-python-contrib"
-Documentation = "https://opentelemetry-python-contrib.readthedocs.io/"
+Homepage = "https://github.com/KimSoungRyoul/opentelemetry-instrumentation-aerospike"
+Repository = "https://github.com/KimSoungRyoul/opentelemetry-instrumentation-aerospike"
+Documentation = "https://github.com/KimSoungRyoul/opentelemetry-instrumentation-aerospike#readme"
 
 [tool.hatch.version]
 path = "src/opentelemetry/instrumentation/aerospike/version.py"
