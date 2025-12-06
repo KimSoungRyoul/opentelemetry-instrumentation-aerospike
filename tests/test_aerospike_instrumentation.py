@@ -3,10 +3,10 @@
 
 """Unit tests for OpenTelemetry Aerospike Instrumentation."""
 
-import pytest
 from unittest.mock import MagicMock, patch
 
-from opentelemetry import trace
+import pytest
+
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -123,7 +123,7 @@ class TestInstrumentedAerospikeClient:
 
             try:
                 client = mock_aerospike.client({})
-                result = client.get(("test", "demo", "key1"))
+                client.get(("test", "demo", "key1"))
 
                 spans = exporter.get_finished_spans()
                 assert len(spans) == 1
@@ -177,7 +177,7 @@ class TestInstrumentedAerospikeClient:
         mock_aerospike = MagicMock()
         mock_client = MagicMock()
 
-        error = Exception("Record not found")
+        error = ValueError("Record not found")
         error.code = 2  # KEY_NOT_FOUND
         mock_client.get.side_effect = error
         mock_aerospike.client.return_value = mock_client
@@ -191,7 +191,7 @@ class TestInstrumentedAerospikeClient:
             try:
                 client = mock_aerospike.client({})
 
-                with pytest.raises(Exception):
+                with pytest.raises(ValueError):
                     client.get(("test", "demo", "key1"))
 
                 spans = exporter.get_finished_spans()
@@ -199,7 +199,7 @@ class TestInstrumentedAerospikeClient:
 
                 span = spans[0]
                 assert span.status.status_code == StatusCode.ERROR
-                assert span.attributes["error.type"] == "Exception"
+                assert span.attributes["error.type"] == "ValueError"
                 assert span.attributes["db.response.status_code"] == "2"
             finally:
                 instrumentor.uninstrument()
@@ -272,7 +272,7 @@ class TestInstrumentedAerospikeClient:
 
         mock_aerospike = MagicMock()
         mock_client = MagicMock()
-        mock_client.get.side_effect = Exception("Test error")
+        mock_client.get.side_effect = RuntimeError("Test error")
         mock_aerospike.client.return_value = mock_client
 
         hook_calls = []
@@ -289,7 +289,7 @@ class TestInstrumentedAerospikeClient:
             try:
                 client = mock_aerospike.client({})
 
-                with pytest.raises(Exception):
+                with pytest.raises(RuntimeError):
                     client.get(("test", "demo", "key1"))
 
                 assert len(hook_calls) == 1

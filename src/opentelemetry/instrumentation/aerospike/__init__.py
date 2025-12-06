@@ -1,9 +1,7 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-OpenTelemetry Aerospike Instrumentation
-=======================================
+"""OpenTelemetry Aerospike Instrumentation.
 
 This library allows tracing Aerospike database operations using OpenTelemetry.
 
@@ -52,17 +50,17 @@ capture_key (bool)
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Collection
+from collections.abc import Callable, Collection
+from typing import Any
 
 from wrapt import wrap_function_wrapper
 
 from opentelemetry import trace
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.aerospike.package import _instruments
 from opentelemetry.instrumentation.aerospike.version import __version__
+from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode, Tracer
-
 
 # Semantic convention constants
 _DB_SYSTEM = "aerospike"
@@ -261,7 +259,7 @@ class InstrumentedAerospikeClient:
 
         return attr
 
-    def connect(self, *args, **kwargs) -> "InstrumentedAerospikeClient":
+    def connect(self, *args, **kwargs) -> InstrumentedAerospikeClient:
         """Connect to the Aerospike cluster."""
         self._client.connect(*args, **kwargs)
         return self
@@ -391,7 +389,7 @@ class InstrumentedAerospikeClient:
                     self._set_connection_attributes(span)
 
                     # Batch size
-                    if keys and isinstance(keys, (list, tuple)):
+                    if keys and isinstance(keys, list | tuple):
                         span.set_attribute(_DB_OPERATION_BATCH_SIZE_ATTR, len(keys))
 
                 if self._request_hook:
@@ -598,7 +596,7 @@ def _extract_namespace_set_from_key(key_tuple: tuple | None) -> tuple[str | None
 
 def _extract_namespace_set_from_batch(keys: list | tuple | None) -> tuple[str | None, str | None]:
     """Extract namespace and set from batch keys (uses first key)."""
-    if not keys or not isinstance(keys, (list, tuple)):
+    if not keys or not isinstance(keys, list | tuple):
         return None, None
 
     first_key = keys[0]
@@ -608,7 +606,7 @@ def _extract_namespace_set_from_batch(keys: list | tuple | None) -> tuple[str | 
 
 
 def _generate_span_name(operation: str, namespace: str | None, set_name: str | None) -> str:
-    """Generate span name following convention: {operation} {namespace}.{set}"""
+    """Generate span name following convention: {operation} {namespace}.{set}."""
     if namespace and set_name:
         return f"{operation} {namespace}.{set_name}"
     elif namespace:

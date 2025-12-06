@@ -7,11 +7,12 @@ These tests require a running Aerospike instance.
 Run with: pytest tests/test_aerospike_integration.py -v
 """
 
+import contextlib
 import os
-import pytest
 import time
 
-from opentelemetry import trace
+import pytest
+
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -303,8 +304,8 @@ class TestAerospikeIntegration:
         """Test query operation."""
         client, exporter = instrumented_client
 
-        # Create query object
-        query = client.query(AEROSPIKE_NAMESPACE, "demo")
+        # Create query object (result intentionally unused - testing span creation)
+        _ = client.query(AEROSPIKE_NAMESPACE, "demo")
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
@@ -317,8 +318,8 @@ class TestAerospikeIntegration:
         """Test scan operation."""
         client, exporter = instrumented_client
 
-        # Create scan object
-        scan = client.scan(AEROSPIKE_NAMESPACE, "demo")
+        # Create scan object (result intentionally unused - testing span creation)
+        _ = client.scan(AEROSPIKE_NAMESPACE, "demo")
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
@@ -333,10 +334,8 @@ class TestAerospikeIntegration:
 
         key = (AEROSPIKE_NAMESPACE, "demo", "nonexistent_key_12345")
 
-        try:
+        with contextlib.suppress(aerospike.exception.RecordNotFound):
             client.get(key)
-        except aerospike.exception.RecordNotFound:
-            pass  # Expected
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
@@ -486,6 +485,7 @@ class TestAsyncPatternCompatibility:
         import asyncio
         import functools
         from concurrent.futures import ThreadPoolExecutor
+
         from opentelemetry.instrumentation.aerospike import AerospikeInstrumentor
 
         provider, exporter = tracer_setup
@@ -526,15 +526,13 @@ class TestAsyncPatternCompatibility:
                 await async_client.put(key, {"async_data": "test"})
 
                 # Async get
-                result = await async_client.get(key)
+                await async_client.get(key)
 
                 # Async remove
                 await async_client.remove(key)
 
-                return result
-
             # Run async test
-            result = asyncio.run(test_async_operations())
+            asyncio.run(test_async_operations())
 
             # Verify spans were created
             spans = exporter.get_finished_spans()
