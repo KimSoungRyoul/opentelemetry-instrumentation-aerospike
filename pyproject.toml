@@ -90,6 +90,9 @@ target-version = "py310"
 select = ["E", "F", "W", "I", "N", "D", "UP", "B", "C4", "SIM"]
 ignore = ["D100", "D104", "D107", "D203", "D213"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["opentelemetry"]
+
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
