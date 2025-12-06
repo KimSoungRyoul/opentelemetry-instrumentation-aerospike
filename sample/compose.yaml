@@ -1,0 +1,77 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    configs:
+      - source: otel-config
+        target: /etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "55679:55679" # zpages extension
+    depends_on:
+      - jaeger
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/jaeger:2.1.0
+    container_name: jaeger
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4327:4317"   # OTLP gRPC (Jaeger 내부용)
+      - "4328:4318"   # OTLP HTTP (Jaeger 내부용)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
+
+  aerospike:
+    image: aerospike:ce-8.1.0.1
+    container_name: aerospike
+    ports:
+      - "3000:3000"   # Aerospike service port
+      - "3001:3001"   # Aerospike fabric port
+      - "3002:3002"   # Aerospike mesh heartbeat port
+    restart: unless-stopped
+
+configs:
+  otel-config:
+    content: |
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+
+      processors:
+        batch:
+          timeout: 1s
+          send_batch_size: 1024
+
+      exporters:
+        debug:
+          verbosity: detailed
+        otlp/jaeger:
+          endpoint: jaeger:4317
+          tls:
+            insecure: true
+
+      extensions:
+        health_check:
+          endpoint: 0.0.0.0:13133
+        zpages:
+          endpoint: 0.0.0.0:55679
+
+      service:
+        extensions: [health_check, zpages]
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [debug, otlp/jaeger]
+

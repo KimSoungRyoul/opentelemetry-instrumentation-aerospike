@@ -1,0 +1,263 @@
+import logging
+from contextlib import asynccontextmanager
+from typing import Optional
+
+import aerospike
+from aerospike import exception as ex
+from fastapi import FastAPI, HTTPException
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.aerospike import AerospikeInstrumentor
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from pydantic import BaseModel
+
+# Setup tracer provider with service name
+resource = Resource(attributes={
+    SERVICE_NAME: "aerospike-client-api"
+})
+provider = TracerProvider(resource=resource)
+
+# OTLP exporter configuration (send to localhost:4317)
+otlp_exporter = OTLPSpanExporter(
+    endpoint="localhost:4317",
+    insecure=True
+)
+processor = BatchSpanProcessor(otlp_exporter)
+provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
+
+# Instrument Aerospike
+AerospikeInstrumentor().instrument(tracer_provider=provider)
+
+
+
+# uvicorn logger configuration
+logger = logging.getLogger("uvicorn")
+
+
+
+# Aerospike configuration
+AEROSPIKE_HOST = "127.0.0.1"
+AEROSPIKE_PORT = 3000
+AEROSPIKE_NAMESPACE = "test"
+AEROSPIKE_SET = "demo"
+
+# Global client
+aerospike_client: Optional[aerospike.Client] = None
+
+
+def get_aerospike_client() -> aerospike.Client:
+    """Return Aerospike client"""
+    if aerospike_client is None:
+        raise HTTPException(status_code=500, detail="Aerospike client not initialized")
+    return aerospike_client
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """FastAPI lifecycle management"""
+    global aerospike_client
+
+    # Connect to Aerospike on startup
+    config = {
+        "hosts": [(AEROSPIKE_HOST, AEROSPIKE_PORT)]
+    }
+    try:
+        aerospike_client = aerospike.client(config).connect()
+        print("Aerospike connection successful")
+    except ex.AerospikeError as e:
+        print(f"Aerospike connection failed: {e}")
+        aerospike_client = None
+
+    yield
+
+    # Disconnect on shutdown
+    if aerospike_client:
+        aerospike_client.close()
+        print("Aerospike connection closed")
+
+
+app = FastAPI(
+    title="Aerospike client API",
+    description="API providing Aerospike functionality",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Instrument FastAPI
+FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
+
+
+# Pydantic model definitions
+class ApiTestRequest(BaseModel):
+    key: str
+    bins: dict
+    query_bin: str
+    query_value: int | str
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "key": "test_user",
+                    "bins": {"name": "Test User", "age": 25, "city": "Seoul"},
+                    "query_bin": "age",
+                    "query_value": 25
+                }
+            ]
+        }
+    }
+
+
+class ApiTestResponse(BaseModel):
+    success: bool
+    put_result: dict
+    get_result: dict
+    touch_result: dict
+    query_result: list[dict]
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "success": True,
+                    "put_result": {"status": "ok", "key": "test_user"},
+                    "get_result": {"key": "test_user", "bins": {"name": "Test User", "age": 25}, "generation": 1},
+                    "touch_result": {"status": "ok", "key": "test_user", "new_generation": 2},
+                    "query_result": [{"key": "test_user", "bins": {"name": "Test User", "age": 25}}]
+                }
+            ]
+        }
+    }
+
+
+@app.get("/")
+async def root():
+    """API status check"""
+    return {"status": "running", "message": "Aerospike client API"}
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    client = get_aerospike_client()
+    try:
+        client.is_connected()
+        return {"status": "healthy", "aerospike": "connected"}
+    except Exception:
+        return {"status": "unhealthy", "aerospike": "disconnected"}
+
+
+@app.post("/aerospike/api/test")
+async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
+    """
+    Aerospike API test endpoint
+    - client.put: Store record
+    - client.get: Retrieve record
+    - client.touch: Refresh TTL
+    - query.select() + query.where(): Execute query
+    """
+    client = get_aerospike_client()
+
+    # Create key tuple (namespace, set, key)
+    key = (AEROSPIKE_NAMESPACE, AEROSPIKE_SET, request.key)
+
+    # ============================================
+    # 1. client.put - Store record
+    # ============================================
+    logger.info(f"[PUT] key={request.key}, bins={request.bins}")
+
+    client.put(key, request.bins)
+    put_result = {"status": "ok", "key": request.key, "bins": request.bins}
+    logger.info(f"[PUT] Success: key={request.key}")
+    
+
+    # ============================================
+    # 2. client.get - Retrieve record
+    # ============================================
+    logger.info(f"[GET] key={request.key}")
+
+    (key_tuple, meta, bins) = client.get(key)
+    get_result = {
+        "status": "ok",
+        "key": request.key,
+        "bins": bins,
+        "generation": meta.get("gen") if meta else None,
+        "ttl": meta.get("ttl") if meta else None
+    }
+    logger.info(f"[GET] Success: key={request.key}, bins={bins}, meta={meta}")
+
+    # ============================================
+    # 3. client.touch - Refresh TTL
+    # ============================================
+    logger.info(f"[TOUCH] key={request.key}")
+    try:
+        # TTL policy can be set when calling touch() (using default here)
+        client.touch(key)
+        # Get record again after touch to verify new generation
+        (_, touch_meta, _) = client.get(key)
+        touch_result = {
+            "status": "ok",
+            "key": request.key,
+            "new_generation": touch_meta.get("gen") if touch_meta else None,
+            "new_ttl": touch_meta.get("ttl") if touch_meta else None
+        }
+        logger.info(f"[TOUCH] Success: key={request.key}, new_meta={touch_meta}")
+    except ex.RecordNotFound:
+        touch_result = {"status": "not_found", "key": request.key}
+        logger.warning(f"[TOUCH] Record not found: key={request.key}")
+    except ex.AerospikeError as e:
+        touch_result = {"status": "error", "key": request.key, "error": str(e)}
+        logger.error(f"[TOUCH] Failed: key={request.key}, error={e}")
+
+    # ============================================
+    # 4. query.select() + query.where() - Execute query
+    # ============================================
+    logger.info(f"[QUERY] bin={request.query_bin}, value={request.query_value}")
+    query_result = []
+
+    # Create Query object
+    query = client.query(AEROSPIKE_NAMESPACE, AEROSPIKE_SET)
+
+    # select() - Specify bins to return
+    query.select(*request.bins.keys())
+
+    # where() - Add filter condition (requires Secondary Index)
+    # Using equals predicate
+    query.where(aerospike.predicates.equals(request.query_bin, request.query_value))
+
+    # Execute query and collect results
+    records = query.results()
+    for record in records:
+        (rec_key, rec_meta, rec_bins) = record
+        query_result.append({
+            "key": rec_key[2] if rec_key and len(rec_key) > 2 else None,
+            "bins": rec_bins,
+            "generation": rec_meta.get("gen") if rec_meta else None
+        })
+    logger.info(f"[QUERY] Success: found {len(query_result)} records")
+
+
+    # ============================================
+    # Return results
+    # ============================================
+    return ApiTestResponse(
+        success=put_result.get("status") == "ok" and get_result.get("status") == "ok",
+        put_result=put_result,
+        get_result=get_result,
+        touch_result=touch_result,
+        query_result=query_result
+    )
+
+
+
+def main():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+if __name__ == "__main__":
+    main()
