@@ -287,27 +287,30 @@ class InstrumentedAerospikeClient:
         """Connect to the Aerospike cluster and cache server address."""
         result = self._client.connect(*args, **kwargs)
         
-        # If server address wasn't set during __init__, try to get it from client after connection
-        if self._server_address is None:
-            try:
-                # Try to get node info after connection
-                if hasattr(self._client, "get_nodes"):
-                    nodes = self._client.get_nodes()
-                    if nodes:
-                        # Use first node's address
-                        node = nodes[0]
-                        if hasattr(node, "name"):
-                            # node.name is typically "host:port"
-                            node_name = node.name
-                            if ":" in node_name:
-                                host, port = node_name.rsplit(":", 1)
-                                self._server_address = host
+        # Always try to get actual connected server info after connection
+        try:
+            # Try to get node info after connection
+            if hasattr(self._client, "get_nodes"):
+                nodes = self._client.get_nodes()
+                if nodes:
+                    # Use first node's address
+                    node = nodes[0]
+                    if hasattr(node, "name"):
+                        # node.name is typically "host:port" or "host"
+                        node_name = str(node.name)
+                        if ":" in node_name:
+                            host, port = node_name.rsplit(":", 1)
+                            self._server_address = host
+                            try:
                                 self._server_port = int(port)
-                            else:
-                                self._server_address = node_name
+                            except ValueError:
                                 self._server_port = 3000
-            except Exception:
-                pass
+                        else:
+                            self._server_address = node_name
+                            self._server_port = 3000
+        except Exception:
+            # If we can't get node info, keep the config-based values
+            pass
         
         return self
 
