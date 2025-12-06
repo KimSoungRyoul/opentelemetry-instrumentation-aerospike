@@ -3,5 +3,4 @@
 
 """Package metadata for opentelemetry-instrumentation-aerospike."""
 
-_instruments = ("aerospike >= 17.2.0",)
-
+_instruments = ("aerospike >= 17.0.0",)
