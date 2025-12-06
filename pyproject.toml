@@ -1,0 +1,115 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opentelemetry-instrumentation-aerospike"
+dynamic = ["version"]
+description = "OpenTelemetry Aerospike instrumentation"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "kimsoungryoul", email = "soungryoul.kim@navercorp.com" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+]
+keywords = ["opentelemetry", "aerospike", "instrumentation", "tracing", "observability"]
+dependencies = [
+    "opentelemetry-api ~= 1.12",
+    "opentelemetry-instrumentation >= 0.40b0",
+    "opentelemetry-semantic-conventions >= 0.40b0",
+    "wrapt >= 1.0.0, < 2.0.0",
+]
+
+[project.optional-dependencies]
+instruments = ["aerospike >= 17.2.0"]
+test = [
+    "opentelemetry-instrumentation-aerospike[instruments]",
+    "opentelemetry-test-utils >= 0.40b0",
+    "opentelemetry-sdk >= 1.12",
+    "pytest >= 7.0",
+    "pytest-cov >= 4.0",
+]
+dev = [
+    "opentelemetry-instrumentation-aerospike[test]",
+    "black >= 23.0",
+    "isort >= 5.0",
+    "mypy >= 1.0",
+    "ruff >= 0.1.0",
+]
+
+[project.entry-points.opentelemetry_instrumentor]
+aerospike = "opentelemetry.instrumentation.aerospike:AerospikeInstrumentor"
+
+[project.urls]
+Homepage = "https://github.com/open-telemetry/opentelemetry-python-contrib"
+Repository = "https://github.com/open-telemetry/opentelemetry-python-contrib"
+Documentation = "https://opentelemetry-python-contrib.readthedocs.io/"
+
+[tool.hatch.version]
+path = "src/opentelemetry/instrumentation/aerospike/version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/opentelemetry"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/opentelemetry/instrumentation/aerospike" = "opentelemetry/instrumentation/aerospike"
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312", "py313"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["opentelemetry"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "D", "UP", "B", "C4", "SIM"]
+ignore = ["D100", "D104", "D107", "D203", "D213"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["src/opentelemetry/instrumentation/aerospike"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
