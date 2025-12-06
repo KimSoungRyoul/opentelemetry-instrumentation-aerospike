@@ -68,6 +68,10 @@ async def lifespan(app: FastAPI):
     try:
         aerospike_client = aerospike.client(config).connect()
         print("Aerospike connection successful")
+        
+        # Create secondary indexes for query operations
+        _create_secondary_indexes(aerospike_client)
+        
     except ex.AerospikeError as e:
         print(f"Aerospike connection failed: {e}")
         aerospike_client = None
@@ -78,6 +82,55 @@ async def lifespan(app: FastAPI):
     if aerospike_client:
         aerospike_client.close()
         print("Aerospike connection closed")
+
+
+def _create_secondary_indexes(client: aerospike.Client) -> None:
+    """Create secondary indexes if they don't exist"""
+    indexes = [
+        # Index for 'age' bin (numeric)
+        {
+            "ns": AEROSPIKE_NAMESPACE,
+            "set": AEROSPIKE_SET,
+            "bin": "age",
+            "index_name": "idx_demo_age",
+            "index_type": aerospike.INDEX_NUMERIC
+        },
+        # Index for 'name' bin (string)
+        {
+            "ns": AEROSPIKE_NAMESPACE,
+            "set": AEROSPIKE_SET,
+            "bin": "name",
+            "index_name": "idx_demo_name",
+            "index_type": aerospike.INDEX_STRING
+        },
+        # Index for 'city' bin (string)
+        {
+            "ns": AEROSPIKE_NAMESPACE,
+            "set": AEROSPIKE_SET,
+            "bin": "city",
+            "index_name": "idx_demo_city",
+            "index_type": aerospike.INDEX_STRING
+        }
+    ]
+    
+    for idx_config in indexes:
+        try:
+            client.index_string_create(
+                idx_config["ns"],
+                idx_config["set"],
+                idx_config["bin"],
+                idx_config["index_name"]
+            ) if idx_config["index_type"] == aerospike.INDEX_STRING else client.index_integer_create(
+                idx_config["ns"],
+                idx_config["set"],
+                idx_config["bin"],
+                idx_config["index_name"]
+            )
+            print(f"✓ Created index: {idx_config['index_name']} on {idx_config['bin']}")
+        except ex.IndexFoundError:
+            print(f"✓ Index already exists: {idx_config['index_name']}")
+        except ex.AerospikeError as e:
+            print(f"✗ Failed to create index {idx_config['index_name']}: {e}")
 
 
 app = FastAPI(
