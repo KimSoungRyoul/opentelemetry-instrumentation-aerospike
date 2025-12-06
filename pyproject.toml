@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-instruments = ["aerospike >= 17.2.0"]
+instruments = ["aerospike >= 17.0.0"]
 test = [
     "opentelemetry-instrumentation-aerospike[instruments]",
     "opentelemetry-test-utils >= 0.40b0",
@@ -112,4 +112,10 @@ exclude_lines = [
     "def __repr__",
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
+]
+
+[tool.uv.workspace]
+members = [
+    "sample-fastapi",
+    "sample-app",
 ]
