@@ -86,29 +86,10 @@ jobs:
           print(f'Dependencies: {instrumentor.instrumentation_dependencies()}')
           "
 
-  publish-testpypi:
-    runs-on: ubuntu-latest
-    needs: [build, test]
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/opentelemetry-instrumentation-aerospike
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          password: ${{ secrets.TEST_PYPI_ACCESS_TOKEN }}
-        continue-on-error: true
 
   publish-pypi:
     runs-on: ubuntu-latest
-    needs: [build, test, publish-testpypi]
+    needs: [build, test]
     environment:
       name: pypi
       url: https://pypi.org/p/opentelemetry-instrumentation-aerospike
@@ -121,5 +102,4 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_ACCESS_TOKEN }}
+
