@@ -5,6 +5,7 @@ A FastAPI application demonstrating Aerospike operations with OpenTelemetry inst
 ## Features
 
 - ✅ **CRUD Operations**: `put`, `get`, `touch`
+- ✅ **Batch Operations**: `batch_read` for multiple records
 - ✅ **Query with Secondary Index**: Automatic index creation
 - ✅ **OpenTelemetry Tracing**: Full distributed tracing
 - ✅ **Jaeger Integration**: Visualize traces in real-time
@@ -59,9 +60,20 @@ curl -X POST "http://localhost:8000/aerospike/api/test" \
     "key": "test_user",
     "bins": {"name": "Test User", "age": 25, "city": "Seoul"},
     "query_bin": "age",
-    "query_value": 25
+    "query_value": 25,
+    "batch_keys": ["batch_user_1", "batch_user_2", "batch_user_3"]
   }'
 ```
+
+### API Operations
+
+The `/aerospike/api/test` endpoint demonstrates the following Aerospike operations:
+
+1. **`client.put()`** - Store a single record
+2. **`client.get()`** - Retrieve a single record
+3. **`client.touch()`** - Refresh TTL and increment generation
+4. **`query.where()`** - Query records using secondary index
+5. **`client.batch_read()`** - Read multiple records in a single operation
 
 
 ![jaeger sample2](./images/image2.png)

@@ -150,6 +150,7 @@ class ApiTestRequest(BaseModel):
     bins: dict
     query_bin: str
     query_value: int | str
+    batch_keys: list[str] = ["batch_user_1", "batch_user_2", "batch_user_3"]
 
     model_config = {
         "json_schema_extra": {
@@ -158,7 +159,8 @@ class ApiTestRequest(BaseModel):
                     "key": "test_user",
                     "bins": {"name": "Test User", "age": 25, "city": "Seoul"},
                     "query_bin": "age",
-                    "query_value": 25
+                    "query_value": 25,
+                    "batch_keys": ["batch_user_1", "batch_user_2", "batch_user_3"]
                 }
             ]
         }
@@ -171,6 +173,7 @@ class ApiTestResponse(BaseModel):
     get_result: dict
     touch_result: dict
     query_result: list[dict]
+    batch_read_result: dict
 
     model_config = {
         "json_schema_extra": {
@@ -180,7 +183,8 @@ class ApiTestResponse(BaseModel):
                     "put_result": {"status": "ok", "key": "test_user"},
                     "get_result": {"key": "test_user", "bins": {"name": "Test User", "age": 25}, "generation": 1},
                     "touch_result": {"status": "ok", "key": "test_user", "new_generation": 2},
-                    "query_result": [{"key": "test_user", "bins": {"name": "Test User", "age": 25}}]
+                    "query_result": [{"key": "test_user", "bins": {"name": "Test User", "age": 25}}],
+                    "batch_read_result": {"status": "ok", "total_keys": 3, "found": 2, "records": []}
                 }
             ]
         }
@@ -212,6 +216,7 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     - client.get: Retrieve record
     - client.touch: Refresh TTL
     - query.select() + query.where(): Execute query
+    - client.batch_read: Read multiple records at once
     """
     client = get_aerospike_client()
 
@@ -293,6 +298,69 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
         })
     logger.info(f"[QUERY] Success: found {len(query_result)} records")
 
+    # ============================================
+    # 5. client.batch_read() - Read multiple records at once
+    # ============================================
+    logger.info(f"[BATCH_READ] keys={request.batch_keys}")
+    
+    # First, create some batch records for demonstration
+    for batch_key in request.batch_keys:
+        batch_key_tuple = (AEROSPIKE_NAMESPACE, AEROSPIKE_SET, batch_key)
+        try:
+            client.put(batch_key_tuple, {
+                "name": f"Batch User {batch_key}",
+                "age": 20 + len(batch_key),
+                "city": "Seoul"
+            })
+        except ex.AerospikeError as e:
+            logger.warning(f"[BATCH_READ] Failed to create batch record {batch_key}: {e}")
+    
+    # Prepare batch read operations
+    batch_keys = [
+        (AEROSPIKE_NAMESPACE, AEROSPIKE_SET, k) for k in request.batch_keys
+    ]
+    
+    # Execute batch_read
+    try:
+        batch_records = client.batch_read(batch_keys)
+        
+        batch_result_records = []
+        found_count = 0
+        
+        for batch_record in batch_records:
+            record_key, record_meta, record_bins = batch_record
+            if record_bins:  # Record found
+                found_count += 1
+                batch_result_records.append({
+                    "key": record_key[2] if record_key and len(record_key) > 2 else None,
+                    "bins": record_bins,
+                    "generation": record_meta.get("gen") if record_meta else None,
+                    "ttl": record_meta.get("ttl") if record_meta else None
+                })
+            else:  # Record not found
+                batch_result_records.append({
+                    "key": record_key[2] if record_key and len(record_key) > 2 else None,
+                    "bins": None,
+                    "error": "not_found"
+                })
+        
+        batch_read_result = {
+            "status": "ok",
+            "total_keys": len(request.batch_keys),
+            "found": found_count,
+            "records": batch_result_records
+        }
+        logger.info(f"[BATCH_READ] Success: {found_count}/{len(request.batch_keys)} records found")
+        
+    except ex.AerospikeError as e:
+        batch_read_result = {
+            "status": "error",
+            "error": str(e),
+            "total_keys": len(request.batch_keys),
+            "found": 0,
+            "records": []
+        }
+        logger.error(f"[BATCH_READ] Failed: {e}")
 
     # ============================================
     # Return results
@@ -302,7 +370,8 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
         put_result=put_result,
         get_result=get_result,
         touch_result=touch_result,
-        query_result=query_result
+        query_result=query_result,
+        batch_read_result=batch_read_result
     )
 
 
