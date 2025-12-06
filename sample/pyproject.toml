@@ -13,7 +13,9 @@ dependencies = [
     "opentelemetry-sdk>=1.28.0",
     "opentelemetry-exporter-otlp>=1.39.0",
     "opentelemetry-instrumentation-fastapi>=0.60b0",
-
-    # aerospike 
-    "opentelemetry-instrumentation-aerospike>=0.2.3",
+    # aerospike
+    "opentelemetry-instrumentation-aerospike==0.2.4",
 ]
+
+[tool.uv.sources]
+opentelemetry-instrumentation-aerospike = { path = "../dist/opentelemetry_instrumentation_aerospike-0.2.4.tar.gz" }

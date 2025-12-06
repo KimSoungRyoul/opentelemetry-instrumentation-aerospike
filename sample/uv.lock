@@ -4,20 +4,15 @@ requires-python = ">=3.13"
 
 [[package]]
 name = "aerospike"
-version = "18.0.0"
+version = "17.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/05/5b/cdf291984826ea1e742076bd69a5437ab5a3f8791c7cb259807813cb5322/aerospike-18.0.0.tar.gz", hash = "sha256:47228d7cbaeb438c39a067b3a5cebda3096f583c32c1e20ef7a8eafaaa7d7895", size = 2242563, upload-time = "2025-10-01T23:18:55.813Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/26/4320ab5351639576e2dc75d1e68b63a8c63990a2bc611727f98fedb43522/aerospike-17.0.0.tar.gz", hash = "sha256:d74a9b0365004e93d52f5db61081c6da00e4dc83e7cde6a810ad9cd64c0b29dd", size = 2184761, upload-time = "2025-05-05T19:18:55.999Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/f4/7814302ec48a6cd95d8e26cef0a9ecc3cd82361ad6366a1285f20d608593/aerospike-18.0.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:72d0e277a584dea7d92c4cefde99f798e42c139ccd6f8260046e6fd540abb6d0", size = 3304910, upload-time = "2025-10-01T23:18:31.558Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/e7/804208e6b5b54530a1c68a412e47f9f4e1d7ccc13d332e3dcb589b28aa91/aerospike-18.0.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:4bfdfa4c8651d734a373f6883529d8742d598a77ebb32730d44a604b2361add6", size = 3102006, upload-time = "2025-10-01T23:18:32.974Z" },
-    { url = "https://files.pythonhosted.org/packages/37/af/1e1c10ad6ba53feb484b79af50da425ebcc590c3e7d849aa58266c04e64e/aerospike-18.0.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:a5dd6ad379ef67fdacc3ba212015e316b42b4b15e7382987015d547ddf5ddabc", size = 5982339, upload-time = "2025-10-01T23:18:34.943Z" },
-    { url = "https://files.pythonhosted.org/packages/b2/64/0068eb8820f34c0548e77b961fb67469e91dd0b53ec91c2948f74976a560/aerospike-18.0.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:5704045a4ab423feb68a4a554c93ac22bdccd26b44118bd2906a92dee27d843a", size = 6109659, upload-time = "2025-10-01T23:18:36.556Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/2c/b305e07c280525b16d11e099a4e7fe57ee4c9a662608f1ea97ddb897ad36/aerospike-18.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:d36266583aa0afa322a308af2582a29ff84b271f8e6926ab09a178b527a57a8b", size = 3375931, upload-time = "2025-10-01T23:18:38.109Z" },
-    { url = "https://files.pythonhosted.org/packages/b1/77/43ba41e73fba0958e5b7609d5e5f30315ff756b419f0174cf403d6b6f8e7/aerospike-18.0.0-cp314-cp314-macosx_13_0_arm64.whl", hash = "sha256:e82b373d7e01faeba4a85826b3726e7debae42e4125b861260825af34742c2b1", size = 3305014, upload-time = "2025-10-01T23:18:39.615Z" },
-    { url = "https://files.pythonhosted.org/packages/55/cc/a5dd38d5adf445dbe799870803525bd13ae81211b70cc0151d9c3889640e/aerospike-18.0.0-cp314-cp314-macosx_13_0_x86_64.whl", hash = "sha256:b56b1ca12e08ba1957ebf403375633786b36a9266a5f65288cdda6fd1e09c07f", size = 3101772, upload-time = "2025-10-01T23:18:41.003Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/5f/1c867ab5dea6889e7e5cc6374aff2ea2bc91ab599fef5758c7d5a5b1ba45/aerospike-18.0.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:14f335b089197397a0f4f019c11f50a7d1f09b6e4b83513e2eefd848fabb6cde", size = 5973816, upload-time = "2025-10-01T23:18:42.56Z" },
-    { url = "https://files.pythonhosted.org/packages/e3/b0/6b4644c9aa11fd4ab87d67e050f08c7a76214590a1d3cc2d1856b464ab68/aerospike-18.0.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:eae34a9c408a831b13eac4109ce83395e52e4cd39961436153a30d369d9c8220", size = 6096129, upload-time = "2025-10-01T23:18:44.808Z" },
-    { url = "https://files.pythonhosted.org/packages/bc/86/f89cc956f0cef2ba8fdd99f72bb8cb3279e7f5d7b7c2ce1fb6ebc824733d/aerospike-18.0.0-cp314-cp314-win_amd64.whl", hash = "sha256:2c5b3dac4bfac6c222537d81446318975ee4b1e56710415dcf4595af03c1777f", size = 3487816, upload-time = "2025-10-01T23:18:46.232Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/c4/231ae92b9229e56a6f9a91147bef399d5c3104c6036d07703cf2c1a869a3/aerospike-17.0.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:5aefdb33241a39f05a75c4bde5d00ec7413e6ff1072129b75ac2acfecf9163be", size = 3222311, upload-time = "2025-05-05T19:18:40.047Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/23/578d2c98b628aa1a70e09474018bc9ab297ac29e6faf902985fc03bfe1d5/aerospike-17.0.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:81882726ada85b63558f48c5d714468e62e88a796eefab0c4f022d197bcd377d", size = 3015253, upload-time = "2025-05-05T19:18:41.304Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/9d/8af1d4105cc1953d512ec4cf3b6001243ed83893a826b9b5d5a8bd228b71/aerospike-17.0.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5e78729b6c599f24175edae8b19e8e436f2288a98245e1f801d208ccadbf2e6b", size = 5603267, upload-time = "2025-05-05T19:18:44.647Z" },
+    { url = "https://files.pythonhosted.org/packages/24/81/3f860e30b1ea5f1838bfe463db9079eddaed219af4442c33e8023e6efb24/aerospike-17.0.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ffac40ab4ac614508d161c15fb179b7cfa5e8377af8b8e71f668d9549b7dd62a", size = 5716893, upload-time = "2025-05-05T19:18:46.06Z" },
+    { url = "https://files.pythonhosted.org/packages/16/54/7cb1da72189a27a5dff21c297656abb4ffdea211cde78f6537ff07c65942/aerospike-17.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:0db5b13071ae87f2239f539ae7b9ceebaae00c68a936423d35c051693a973445", size = 1798942, upload-time = "2025-05-05T19:18:47.783Z" },
 ]
 
 [[package]]
@@ -309,18 +304,35 @@ wheels = [
 
 [[package]]
 name = "opentelemetry-instrumentation-aerospike"
-version = "0.2.3"
-source = { registry = "https://pypi.org/simple" }
+version = "0.2.4"
+source = { path = "../dist/opentelemetry_instrumentation_aerospike-0.2.4.tar.gz" }
 dependencies = [
     { name = "opentelemetry-api" },
     { name = "opentelemetry-instrumentation" },
     { name = "opentelemetry-semantic-conventions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/e6/52336c1eff84ee3ea8d770020210b16a2763d409bc6b117d74b7592d21ff/opentelemetry_instrumentation_aerospike-0.2.3.tar.gz", hash = "sha256:9e71aa21c6d03020e4b51b52e9020f7463e254b096e9a365f884cfd854196848", size = 17210, upload-time = "2025-12-06T06:39:50.162Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/9c/611fe7a6f52a1353d525b1e0a1e42e19e8f11fbe0797a59f8dd2d19cd4cb/opentelemetry_instrumentation_aerospike-0.2.3-py3-none-any.whl", hash = "sha256:ee890c7f02b8180547a62733494e345f1e50ac1c6b520495c0b51bc4e1db45fe", size = 9572, upload-time = "2025-12-06T06:39:48.711Z" },
+sdist = { hash = "sha256:b945a59f7f7323bc6bd82d75c92eec2bd17ac7b4611103678fee765b33c092f9" }
+
+[package.metadata]
+requires-dist = [
+    { name = "aerospike", marker = "extra == 'instruments'", specifier = ">=17.0.0" },
+    { name = "black", marker = "extra == 'dev'", specifier = ">=23.0" },
+    { name = "isort", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0" },
+    { name = "opentelemetry-api", specifier = "~=1.12" },
+    { name = "opentelemetry-instrumentation", specifier = ">=0.40b0" },
+    { name = "opentelemetry-instrumentation-aerospike", extras = ["instruments"], marker = "extra == 'test'" },
+    { name = "opentelemetry-instrumentation-aerospike", extras = ["test"], marker = "extra == 'dev'" },
+    { name = "opentelemetry-sdk", marker = "extra == 'test'", specifier = ">=1.12" },
+    { name = "opentelemetry-semantic-conventions", specifier = ">=0.40b0" },
+    { name = "opentelemetry-test-utils", marker = "extra == 'test'", specifier = ">=0.40b0" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0" },
+    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+    { name = "wrapt", specifier = ">=1.0.0,<2.0.0" },
 ]
+provides-extras = ["instruments", "test", "dev"]
 
 [[package]]
 name = "opentelemetry-instrumentation-asgi"
@@ -527,11 +539,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aerospike", specifier = ">=15.0.0" },
+    { name = "aerospike", specifier = "==17.0.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "opentelemetry-api", specifier = ">=1.28.0" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.39.0" },
-    { name = "opentelemetry-instrumentation-aerospike", specifier = ">=0.2.3" },
+    { name = "opentelemetry-instrumentation-aerospike", path = "../dist/opentelemetry_instrumentation_aerospike-0.2.4.tar.gz" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.60b0" },
     { name = "opentelemetry-sdk", specifier = ">=1.28.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
