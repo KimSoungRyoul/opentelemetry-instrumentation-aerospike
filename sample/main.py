@@ -65,16 +65,11 @@ async def lifespan(app: FastAPI):
     config = {
         "hosts": [(AEROSPIKE_HOST, AEROSPIKE_PORT)]
     }
-    try:
-        aerospike_client = aerospike.client(config).connect()
-        print("Aerospike connection successful")
-        
-        # Create secondary indexes for query operations
-        _create_secondary_indexes(aerospike_client)
-        
-    except ex.AerospikeError as e:
-        print(f"Aerospike connection failed: {e}")
-        aerospike_client = None
+    aerospike_client = aerospike.client(config).connect()
+    print("Aerospike connection successful")
+    
+    # Create secondary indexes for query operations
+    _create_secondary_indexes(aerospike_client)
 
     yield
 
@@ -115,22 +110,23 @@ def _create_secondary_indexes(client: aerospike.Client) -> None:
     
     for idx_config in indexes:
         try:
-            client.index_string_create(
-                idx_config["ns"],
-                idx_config["set"],
-                idx_config["bin"],
-                idx_config["index_name"]
-            ) if idx_config["index_type"] == aerospike.INDEX_STRING else client.index_integer_create(
-                idx_config["ns"],
-                idx_config["set"],
-                idx_config["bin"],
-                idx_config["index_name"]
-            )
+            if idx_config["index_type"] == aerospike.INDEX_STRING:
+                client.index_string_create(
+                    idx_config["ns"],
+                    idx_config["set"],
+                    idx_config["bin"],
+                    idx_config["index_name"]
+                )
+            else:
+                client.index_integer_create(
+                    idx_config["ns"],
+                    idx_config["set"],
+                    idx_config["bin"],
+                    idx_config["index_name"]
+                )
             print(f"✓ Created index: {idx_config['index_name']} on {idx_config['bin']}")
         except ex.IndexFoundError:
             print(f"✓ Index already exists: {idx_config['index_name']}")
-        except ex.AerospikeError as e:
-            print(f"✗ Failed to create index {idx_config['index_name']}: {e}")
 
 
 app = FastAPI(
@@ -201,11 +197,8 @@ async def root():
 async def health_check():
     """Health check endpoint"""
     client = get_aerospike_client()
-    try:
-        client.is_connected()
-        return {"status": "healthy", "aerospike": "connected"}
-    except Exception:
-        return {"status": "unhealthy", "aerospike": "disconnected"}
+    client.is_connected()
+    return {"status": "healthy", "aerospike": "connected"}
 
 
 @app.post("/aerospike/api/test")
@@ -252,24 +245,18 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     # 3. client.touch - Refresh TTL
     # ============================================
     logger.info(f"[TOUCH] key={request.key}")
-    try:
-        # TTL policy can be set when calling touch() (using default here)
-        client.touch(key)
-        # Get record again after touch to verify new generation
-        (_, touch_meta, _) = client.get(key)
-        touch_result = {
-            "status": "ok",
-            "key": request.key,
-            "new_generation": touch_meta.get("gen") if touch_meta else None,
-            "new_ttl": touch_meta.get("ttl") if touch_meta else None
-        }
-        logger.info(f"[TOUCH] Success: key={request.key}, new_meta={touch_meta}")
-    except ex.RecordNotFound:
-        touch_result = {"status": "not_found", "key": request.key}
-        logger.warning(f"[TOUCH] Record not found: key={request.key}")
-    except ex.AerospikeError as e:
-        touch_result = {"status": "error", "key": request.key, "error": str(e)}
-        logger.error(f"[TOUCH] Failed: key={request.key}, error={e}")
+    
+    # TTL policy can be set when calling touch() (using default here)
+    client.touch(key)
+    # Get record again after touch to verify new generation
+    (_, touch_meta, _) = client.get(key)
+    touch_result = {
+        "status": "ok",
+        "key": request.key,
+        "new_generation": touch_meta.get("gen") if touch_meta else None,
+        "new_ttl": touch_meta.get("ttl") if touch_meta else None
+    }
+    logger.info(f"[TOUCH] Success: key={request.key}, new_meta={touch_meta}")
 
     # ============================================
     # 4. query.select() + query.where() - Execute query
@@ -306,14 +293,11 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     # First, create some batch records for demonstration
     for batch_key in request.batch_keys:
         batch_key_tuple = (AEROSPIKE_NAMESPACE, AEROSPIKE_SET, batch_key)
-        try:
-            client.put(batch_key_tuple, {
-                "name": f"Batch User {batch_key}",
-                "age": 20 + len(batch_key),
-                "city": "Seoul"
-            })
-        except ex.AerospikeError as e:
-            logger.warning(f"[BATCH_READ] Failed to create batch record {batch_key}: {e}")
+        client.put(batch_key_tuple, {
+            "name": f"Batch User {batch_key}",
+            "age": 20 + len(batch_key),
+            "city": "Seoul"
+        })
     
     # Prepare batch read operations
     batch_keys = [
@@ -321,46 +305,35 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     ]
     
     # Execute batch_read
-    try:
-        batch_records = client.batch_read(batch_keys)
-        
-        batch_result_records = []
-        found_count = 0
-        
-        for batch_record in batch_records:
-            record_key, record_meta, record_bins = batch_record
-            if record_bins:  # Record found
-                found_count += 1
-                batch_result_records.append({
-                    "key": record_key[2] if record_key and len(record_key) > 2 else None,
-                    "bins": record_bins,
-                    "generation": record_meta.get("gen") if record_meta else None,
-                    "ttl": record_meta.get("ttl") if record_meta else None
-                })
-            else:  # Record not found
-                batch_result_records.append({
-                    "key": record_key[2] if record_key and len(record_key) > 2 else None,
-                    "bins": None,
-                    "error": "not_found"
-                })
-        
-        batch_read_result = {
-            "status": "ok",
-            "total_keys": len(request.batch_keys),
-            "found": found_count,
-            "records": batch_result_records
-        }
-        logger.info(f"[BATCH_READ] Success: {found_count}/{len(request.batch_keys)} records found")
-        
-    except ex.AerospikeError as e:
-        batch_read_result = {
-            "status": "error",
-            "error": str(e),
-            "total_keys": len(request.batch_keys),
-            "found": 0,
-            "records": []
-        }
-        logger.error(f"[BATCH_READ] Failed: {e}")
+    batch_records = client.batch_read(batch_keys)
+    
+    batch_result_records = []
+    found_count = 0
+    
+    for batch_record in batch_records:
+        record_key, record_meta, record_bins = batch_record
+        if record_bins:  # Record found
+            found_count += 1
+            batch_result_records.append({
+                "key": record_key[2] if record_key and len(record_key) > 2 else None,
+                "bins": record_bins,
+                "generation": record_meta.get("gen") if record_meta else None,
+                "ttl": record_meta.get("ttl") if record_meta else None
+            })
+        else:  # Record not found
+            batch_result_records.append({
+                "key": record_key[2] if record_key and len(record_key) > 2 else None,
+                "bins": None,
+                "error": "not_found"
+            })
+    
+    batch_read_result = {
+        "status": "ok",
+        "total_keys": len(request.batch_keys),
+        "found": found_count,
+        "records": batch_result_records
+    }
+    logger.info(f"[BATCH_READ] Success: {found_count}/{len(request.batch_keys)} records found")
 
     # ============================================
     # Return results
