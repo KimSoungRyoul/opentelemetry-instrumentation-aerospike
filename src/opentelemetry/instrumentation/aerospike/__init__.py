@@ -173,7 +173,7 @@ def _create_client_wrapper(
     def client_wrapper(wrapped: Callable, instance: Any, args: tuple, kwargs: dict) -> Any:
         # Create the original client
         client = wrapped(*args, **kwargs)
-        
+
         # Extract config from args or kwargs
         config = None
         if args:
@@ -246,7 +246,7 @@ class InstrumentedAerospikeClient:
         # Store server connection info for span attributes
         self._server_address = None
         self._server_port = None
-        
+
         # Extract hosts from config if provided
         if config and isinstance(config, dict):
             hosts = config.get("hosts", [])
@@ -285,8 +285,8 @@ class InstrumentedAerospikeClient:
 
     def connect(self, *args, **kwargs) -> InstrumentedAerospikeClient:
         """Connect to the Aerospike cluster and cache server address."""
-        result = self._client.connect(*args, **kwargs)
-        
+        self._client.connect(*args, **kwargs)
+
         # Always try to get actual connected server info after connection
         try:
             # Try to get node info after connection
@@ -311,7 +311,7 @@ class InstrumentedAerospikeClient:
         except Exception:
             # If we can't get node info, keep the config-based values
             pass
-        
+
         return self
 
     def close(self) -> None:

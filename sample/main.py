@@ -1,30 +1,25 @@
 import logging
 from contextlib import asynccontextmanager
-from typing import Optional
 
 import aerospike
 from aerospike import exception as ex
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.aerospike import AerospikeInstrumentor
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from pydantic import BaseModel
 
 # Setup tracer provider with service name
-resource = Resource(attributes={
-    SERVICE_NAME: "aerospike-client-api"
-})
+resource = Resource(attributes={SERVICE_NAME: "aerospike-client-api"})
 provider = TracerProvider(resource=resource)
 
 # OTLP exporter configuration (send to localhost:4317)
-otlp_exporter = OTLPSpanExporter(
-    endpoint="localhost:4317",
-    insecure=True
-)
+otlp_exporter = OTLPSpanExporter(endpoint="localhost:4317", insecure=True)
 processor = BatchSpanProcessor(otlp_exporter)
 provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
@@ -33,10 +28,8 @@ trace.set_tracer_provider(provider)
 AerospikeInstrumentor().instrument(tracer_provider=provider)
 
 
-
 # uvicorn logger configuration
 logger = logging.getLogger("uvicorn")
-
 
 
 # Aerospike configuration
@@ -46,11 +39,11 @@ AEROSPIKE_NAMESPACE = "test"
 AEROSPIKE_SET = "demo"
 
 # Global client
-aerospike_client: Optional[aerospike.Client] = None
+aerospike_client: aerospike.Client | None = None
 
 
 def get_aerospike_client() -> aerospike.Client:
-    """Return Aerospike client"""
+    """Return Aerospike client."""
     if aerospike_client is None:
         raise HTTPException(status_code=500, detail="Aerospike client not initialized")
     return aerospike_client
@@ -58,16 +51,14 @@ def get_aerospike_client() -> aerospike.Client:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """FastAPI lifecycle management"""
+    """FastAPI lifecycle management."""
     global aerospike_client
 
     # Connect to Aerospike on startup
-    config = {
-        "hosts": [(AEROSPIKE_HOST, AEROSPIKE_PORT)]
-    }
+    config = {"hosts": [(AEROSPIKE_HOST, AEROSPIKE_PORT)]}
     aerospike_client = aerospike.client(config).connect()
     print("Aerospike connection successful")
-    
+
     # Create secondary indexes for query operations
     _create_secondary_indexes(aerospike_client)
 
@@ -80,7 +71,7 @@ async def lifespan(app: FastAPI):
 
 
 def _create_secondary_indexes(client: aerospike.Client) -> None:
-    """Create secondary indexes if they don't exist"""
+    """Create secondary indexes if they don't exist."""
     indexes = [
         # Index for 'age' bin (numeric)
         {
@@ -88,7 +79,7 @@ def _create_secondary_indexes(client: aerospike.Client) -> None:
             "set": AEROSPIKE_SET,
             "bin": "age",
             "index_name": "idx_demo_age",
-            "index_type": aerospike.INDEX_NUMERIC
+            "index_type": aerospike.INDEX_NUMERIC,
         },
         # Index for 'name' bin (string)
         {
@@ -96,7 +87,7 @@ def _create_secondary_indexes(client: aerospike.Client) -> None:
             "set": AEROSPIKE_SET,
             "bin": "name",
             "index_name": "idx_demo_name",
-            "index_type": aerospike.INDEX_STRING
+            "index_type": aerospike.INDEX_STRING,
         },
         # Index for 'city' bin (string)
         {
@@ -104,25 +95,19 @@ def _create_secondary_indexes(client: aerospike.Client) -> None:
             "set": AEROSPIKE_SET,
             "bin": "city",
             "index_name": "idx_demo_city",
-            "index_type": aerospike.INDEX_STRING
-        }
+            "index_type": aerospike.INDEX_STRING,
+        },
     ]
-    
+
     for idx_config in indexes:
         try:
             if idx_config["index_type"] == aerospike.INDEX_STRING:
                 client.index_string_create(
-                    idx_config["ns"],
-                    idx_config["set"],
-                    idx_config["bin"],
-                    idx_config["index_name"]
+                    idx_config["ns"], idx_config["set"], idx_config["bin"], idx_config["index_name"]
                 )
             else:
                 client.index_integer_create(
-                    idx_config["ns"],
-                    idx_config["set"],
-                    idx_config["bin"],
-                    idx_config["index_name"]
+                    idx_config["ns"], idx_config["set"], idx_config["bin"], idx_config["index_name"]
                 )
             print(f"✓ Created index: {idx_config['index_name']} on {idx_config['bin']}")
         except ex.IndexFoundError:
@@ -133,7 +118,7 @@ app = FastAPI(
     title="Aerospike client API",
     description="API providing Aerospike functionality",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Instrument FastAPI
@@ -142,6 +127,8 @@ FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
 
 # Pydantic model definitions
 class ApiTestRequest(BaseModel):
+    """Request model for Aerospike API test."""
+
     key: str
     bins: dict
     query_bin: str
@@ -156,7 +143,7 @@ class ApiTestRequest(BaseModel):
                     "bins": {"name": "Test User", "age": 25, "city": "Seoul"},
                     "query_bin": "age",
                     "query_value": 25,
-                    "batch_keys": ["batch_user_1", "batch_user_2", "batch_user_3"]
+                    "batch_keys": ["batch_user_1", "batch_user_2", "batch_user_3"],
                 }
             ]
         }
@@ -164,6 +151,8 @@ class ApiTestRequest(BaseModel):
 
 
 class ApiTestResponse(BaseModel):
+    """Response model for Aerospike API test."""
+
     success: bool
     put_result: dict
     get_result: dict
@@ -177,10 +166,21 @@ class ApiTestResponse(BaseModel):
                 {
                     "success": True,
                     "put_result": {"status": "ok", "key": "test_user"},
-                    "get_result": {"key": "test_user", "bins": {"name": "Test User", "age": 25}, "generation": 1},
+                    "get_result": {
+                        "key": "test_user",
+                        "bins": {"name": "Test User", "age": 25},
+                        "generation": 1,
+                    },
                     "touch_result": {"status": "ok", "key": "test_user", "new_generation": 2},
-                    "query_result": [{"key": "test_user", "bins": {"name": "Test User", "age": 25}}],
-                    "batch_read_result": {"status": "ok", "total_keys": 3, "found": 2, "records": []}
+                    "query_result": [
+                        {"key": "test_user", "bins": {"name": "Test User", "age": 25}}
+                    ],
+                    "batch_read_result": {
+                        "status": "ok",
+                        "total_keys": 3,
+                        "found": 2,
+                        "records": [],
+                    },
                 }
             ]
         }
@@ -189,13 +189,13 @@ class ApiTestResponse(BaseModel):
 
 @app.get("/")
 async def root():
-    """API status check"""
+    """Check API status."""
     return {"status": "running", "message": "Aerospike client API"}
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint."""
     client = get_aerospike_client()
     client.is_connected()
     return {"status": "healthy", "aerospike": "connected"}
@@ -203,8 +203,8 @@ async def health_check():
 
 @app.post("/aerospike/api/test")
 async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
-    """
-    Aerospike API test endpoint
+    """Aerospike API test endpoint.
+
     - client.put: Store record
     - client.get: Retrieve record
     - client.touch: Refresh TTL
@@ -224,7 +224,6 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     client.put(key, request.bins)
     put_result = {"status": "ok", "key": request.key, "bins": request.bins}
     logger.info(f"[PUT] Success: key={request.key}")
-    
 
     # ============================================
     # 2. client.get - Retrieve record
@@ -237,7 +236,7 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
         "key": request.key,
         "bins": bins,
         "generation": meta.get("gen") if meta else None,
-        "ttl": meta.get("ttl") if meta else None
+        "ttl": meta.get("ttl") if meta else None,
     }
     logger.info(f"[GET] Success: key={request.key}, bins={bins}, meta={meta}")
 
@@ -245,7 +244,7 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     # 3. client.touch - Refresh TTL
     # ============================================
     logger.info(f"[TOUCH] key={request.key}")
-    
+
     # TTL policy can be set when calling touch() (using default here)
     client.touch(key)
     # Get record again after touch to verify new generation
@@ -254,7 +253,7 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
         "status": "ok",
         "key": request.key,
         "new_generation": touch_meta.get("gen") if touch_meta else None,
-        "new_ttl": touch_meta.get("ttl") if touch_meta else None
+        "new_ttl": touch_meta.get("ttl") if touch_meta else None,
     }
     logger.info(f"[TOUCH] Success: key={request.key}, new_meta={touch_meta}")
 
@@ -278,52 +277,55 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
     records = query.results()
     for record in records:
         (rec_key, rec_meta, rec_bins) = record
-        query_result.append({
-            "key": rec_key[2] if rec_key and len(rec_key) > 2 else None,
-            "bins": rec_bins,
-            "generation": rec_meta.get("gen") if rec_meta else None
-        })
+        query_result.append(
+            {
+                "key": rec_key[2] if rec_key and len(rec_key) > 2 else None,
+                "bins": rec_bins,
+                "generation": rec_meta.get("gen") if rec_meta else None,
+            }
+        )
     logger.info(f"[QUERY] Success: found {len(query_result)} records")
 
     # ============================================
     # 5. client.batch_read() - Read multiple records at once
     # ============================================
     logger.info(f"[BATCH_READ] keys={request.batch_keys}")
-    
+
     # First, create some batch records for demonstration
     for batch_key in request.batch_keys:
         batch_key_tuple = (AEROSPIKE_NAMESPACE, AEROSPIKE_SET, batch_key)
-        client.put(batch_key_tuple, {
-            "name": f"Batch User {batch_key}",
-            "age": 20 + len(batch_key),
-            "city": "Seoul"
-        })
-    
+        client.put(
+            batch_key_tuple,
+            {"name": f"Batch User {batch_key}", "age": 20 + len(batch_key), "city": "Seoul"},
+        )
+
     # Prepare batch read operations
-    batch_keys = [
-        (AEROSPIKE_NAMESPACE, AEROSPIKE_SET, k) for k in request.batch_keys
-    ]
-    
+    batch_keys = [(AEROSPIKE_NAMESPACE, AEROSPIKE_SET, k) for k in request.batch_keys]
+
     # Execute batch_read
     batch_records = client.batch_read(batch_keys)
-    
+
     batch_result_records = []
- 
-    
+
     for batch_record in batch_records.batch_records:
         print(batch_record)
         record_key, record_meta, record_bins = batch_record.record
-        logger.info(f"[BATCH_READ] record_key={record_key}, record_meta={record_meta}, record_bins={record_bins}")
-        batch_result_records.append({
-            "key": record_key[2] if record_key and len(record_key) > 2 else None,
-            "bins": record_bins,
-        })
-    
+        logger.info(
+            f"[BATCH_READ] record_key={record_key}, "
+            f"record_meta={record_meta}, record_bins={record_bins}"
+        )
+        batch_result_records.append(
+            {
+                "key": record_key[2] if record_key and len(record_key) > 2 else None,
+                "bins": record_bins,
+            }
+        )
+
     batch_read_result = {
         "status": "ok",
         "total_keys": len(request.batch_keys),
         "found": len(batch_records.batch_records),
-        "records": batch_result_records
+        "records": batch_result_records,
     }
 
     # ============================================
@@ -335,13 +337,14 @@ async def aerospike_api_test(request: ApiTestRequest) -> ApiTestResponse:
         get_result=get_result,
         touch_result=touch_result,
         query_result=query_result,
-        batch_read_result=batch_read_result
+        batch_read_result=batch_read_result,
     )
 
 
-
 def main():
+    """Run the FastAPI application."""
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
