@@ -74,4 +74,3 @@ configs:
             receivers: [otlp]
             processors: [batch]
             exporters: [debug, otlp/jaeger]
-

@@ -14,7 +14,7 @@ uv sync
 
 # Run server
 uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
-# or 
+# or
 uv run python main.py
 ```
 

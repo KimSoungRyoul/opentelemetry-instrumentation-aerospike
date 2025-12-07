@@ -189,7 +189,7 @@ class AsyncAerospikeClient:
     def __init__(self, client):
         self._client = client
         self._executor = ThreadPoolExecutor(max_workers=10)
-    
+
     def __getattr__(self, attr):
         async def method(*args, **kwargs):
             loop = asyncio.get_running_loop()
@@ -277,4 +277,3 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 - [OpenTelemetry Python Contrib](https://github.com/open-telemetry/opentelemetry-python-contrib)
 - [Aerospike Python Client](https://github.com/aerospike/aerospike-client-python)
 - [OpenTelemetry Database Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/database/)
-
