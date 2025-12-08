@@ -1,6 +1,6 @@
 # OpenTelemetry Aerospike Instrumentation
 
-[![PyPI version](https://badge.fury.io/py/opentelemetry-instrumentation-aerospike.svg)](https://badge.fury.io/py/opentelemetry-instrumentation-aerospike)
+![PyPI - Version](https://img.shields.io/pypi/v/opentelemetry-instrumentation-aerospike?color=blue&link=https%3A%2F%2Fpypi.org%2Fproject%2Fopentelemetry-instrumentation-aerospike%2F)
 [![Python Version](https://img.shields.io/pypi/pyversions/opentelemetry-instrumentation-aerospike.svg)](https://pypi.org/project/opentelemetry-instrumentation-aerospike/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
